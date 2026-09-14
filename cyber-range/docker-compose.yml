@@ -1,0 +1,54 @@
+services:
+  neo4j:
+    image: neo4j:5-community
+    container_name: threatgraph_neo4j
+    environment:
+      - NEO4J_AUTH=neo4j/threatgraphpassword
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    networks:
+      range_net:
+        ipv4_address: 10.10.10.5
+
+  web_host:
+    build:
+      context: ./web_host
+      dockerfile: Dockerfile
+    container_name: threatgraph_web_host
+    ports:
+      - "8080:80"
+    networks:
+      range_net:
+        ipv4_address: 10.10.10.10
+
+  internal_host:
+    build:
+      context: ./internal_host
+      dockerfile: Dockerfile
+    container_name: threatgraph_internal_host
+    ports:
+      - "2222:22"
+    networks:
+      range_net:
+        ipv4_address: 10.10.10.20
+
+  db_asset:
+    image: postgres:15-alpine
+    container_name: threatgraph_db_asset
+    environment:
+      - POSTGRES_PASSWORD=threatgraphdb
+      - POSTGRES_DB=customer_db
+    ports:
+      - "5432:5432"
+    networks:
+      range_net:
+        ipv4_address: 10.10.10.30
+
+networks:
+  range_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.10.0/24
+          gateway: 10.10.10.1
