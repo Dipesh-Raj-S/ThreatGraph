@@ -1,0 +1,1 @@
+Synthetic non-sensitive asset records: server-01, server-02, demo-target.

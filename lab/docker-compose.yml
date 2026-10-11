@@ -1,0 +1,58 @@
+services:
+  lab-web-01:
+    build: ./machine-1
+    container_name: lab-web-01
+    networks:
+      - threatgraph-lab
+    ports:
+      - "127.0.0.1:8081:80"
+    restart: unless-stopped
+
+  lab-web-02:
+    build: ./machine-2
+    container_name: lab-web-02
+    networks:
+      - threatgraph-lab
+    ports:
+      - "127.0.0.1:8082:80"
+    restart: unless-stopped
+
+  lab-web-03:
+    build: ./machine-3
+    container_name: lab-web-03
+    networks:
+      - threatgraph-lab
+    ports:
+      - "127.0.0.1:8083:80"
+    restart: unless-stopped
+
+  lab-web-04:
+    build: ./machine-4
+    container_name: lab-web-04
+    networks:
+      - threatgraph-lab
+    ports:
+      - "127.0.0.1:8084:80"
+    restart: unless-stopped
+
+  lab-service-05:
+    build: ./machine-5
+    container_name: lab-service-05
+    networks:
+      - threatgraph-lab
+    restart: unless-stopped
+
+  lab-web-06:
+    build: ./machine-6
+    container_name: lab-web-06
+    networks:
+      - threatgraph-lab
+    ports:
+      - "127.0.0.1:8086:80"
+    restart: unless-stopped
+
+networks:
+  threatgraph-lab:
+    name: threatgraph-lab
+    driver: bridge
+    internal: true
