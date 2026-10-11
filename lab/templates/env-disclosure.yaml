@@ -1,0 +1,25 @@
+id: env-disclosure
+
+info:
+  name: Environment Variables Disclosure (.env)
+  author: ThreatGraph
+  severity: medium
+  description: Detects exposed .env configuration files containing application settings.
+  tags: misconfig,exposure,env
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/.env"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        words:
+          - "APP_ENV="
+          - "DB_HOST="
+        condition: and

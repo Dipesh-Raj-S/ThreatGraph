@@ -1,0 +1,25 @@
+id: git-config
+
+info:
+  name: Git Configuration Exposure
+  author: ThreatGraph
+  severity: medium
+  description: Detects exposed .git/config repository metadata exposing internal repository settings.
+  tags: misconfig,exposure,git
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/.git/config"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        words:
+          - "[core]"
+          - "repositoryformatversion"
+        condition: and

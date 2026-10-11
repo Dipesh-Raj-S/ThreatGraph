@@ -1,0 +1,7 @@
+admin
+uploads
+backup
+api
+config
+secret
+robots.txt
