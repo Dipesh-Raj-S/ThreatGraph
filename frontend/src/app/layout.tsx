@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "ThreatGraph - Attack Graph Risk Analysis",
-  description: "20% Milestone Vertical Slice: Discovery, Graph Construction, Path Scoring",
+  description: "Discovery, Graph Construction, Path Scoring",
 };
 
 export default function RootLayout({
