@@ -1,13 +1,4 @@
-"""
-findings.py - Hand-curated vulnerability finding fixture for ThreatGraph 20% vertical slice.
-
-Note:
-The CVE-2021-41773 finding below represents a real published vulnerability affecting the
-Apache HTTP Server 2.4.49 instance deployed in the cyber-range.
-EPSS score (0.94) is documented as a calibrated fixture value reflecting historical
-exploitability probability (~94th percentile); live lookup against FIRST.org EPSS API
-will be integrated in subsequent milestones.
-"""
+# Vulnerability finding fixture for ThreatGraph 
 
 from typing import Any, Dict, List
 
@@ -31,7 +22,24 @@ HAND_CURATED_FINDINGS: List[Dict[str, Any]] = [
             "level": "user",
             "description": "Remote Code Execution context as daemon",
         },
-    }
+    },
+    {
+        "cve_id": "MISCONFIG-FTP-ANON",
+        "title": "Pure-FTPd Anonymous Access & Synthetic Asset Disclosure",
+        "description": (
+            "Pure-FTPd daemon permits unauthenticated anonymous read access, "
+            "exposing internal asset inventories and system topology data."
+        ),
+        "cvss": 7.5,
+        "epss": 0.72,
+        "target_service_product": "Pure-FTPd",
+        "target_service_version": "",
+        "privilege_granted": {
+            "id": "priv-ftp-anon",
+            "level": "guest",
+            "description": "Unauthenticated read access to internal repository & asset catalog",
+        },
+    },
 ]
 
 

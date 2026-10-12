@@ -1,17 +1,15 @@
 import os
 from typing import Any, Dict, List, Optional
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 from neo4j import GraphDatabase, Driver
 
-# Automatically load .env if present
-load_dotenv()
+load_dotenv(find_dotenv())
 
 NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
 NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "threatgraphpassword")
 
 _driver: Optional[Driver] = None
-
 
 def get_driver() -> Driver:
     global _driver

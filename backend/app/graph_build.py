@@ -12,13 +12,13 @@ from .findings import get_finding_for_service
 def ingest_discovered_services(services: List[Dict[str, Any]]) -> Dict[str, int]:
     """
     Ingest scanned hosts and open services into Neo4j via MERGE.
-    Tags 10.10.10.10 as internet-exposed, others as internal.
     """
     hosts_merged = 0
     services_merged = 0
 
     for item in services:
         ip = item["host"]
+        hostname = item.get("hostname", "")
         port = item["port"]
         proto = item.get("protocol", "tcp")
         service_id = f"{ip}:{proto}:{port}"
@@ -27,15 +27,37 @@ def ingest_discovered_services(services: List[Dict[str, Any]]) -> Dict[str, int]
         version = item.get("version", "")
         
         # Exposure tagging
-        exposure = "internet" if ip == "10.10.10.10" else "internal"
+        exposure = item.get("exposure")
+        if not exposure:
+            if hostname in ["lab-web-01", "lab-web-02", "lab-web-03", "lab-web-04"] or ip == "10.10.10.10":
+                exposure = "internet"
+            else:
+                exposure = "internal"
+
+        # Host display name
+        if hostname:
+            host_name = hostname
+        elif ip == "10.10.10.10":
+            host_name = "web-gateway"
+        elif ip == "10.10.10.20":
+            host_name = "internal-jump"
+        elif ip == "10.10.10.30":
+            host_name = "db-server"
+        else:
+            host_name = ip
 
         # Merge Host
         host_query = """
         MERGE (h:Host {ip: $ip})
-        ON CREATE SET h.exposure = $exposure, h.status = 'up', h.name = CASE WHEN $ip = '10.10.10.10' THEN 'web-gateway' WHEN $ip = '10.10.10.20' THEN 'internal-jump' ELSE 'db-server' END
-        ON MATCH SET h.exposure = $exposure, h.status = 'up'
+        ON CREATE SET h.exposure = $exposure, h.status = 'up', h.name = $name, h.hostname = $hostname
+        ON MATCH SET h.exposure = $exposure, h.status = 'up', h.name = $name, h.hostname = $hostname
         """
-        run_query(host_query, {"ip": ip, "exposure": exposure})
+        run_query(host_query, {
+            "ip": ip,
+            "exposure": exposure,
+            "name": host_name,
+            "hostname": hostname,
+        })
         hosts_merged += 1
 
         # Merge Service and RUNS relationship
@@ -62,7 +84,7 @@ def ingest_discovered_services(services: List[Dict[str, Any]]) -> Dict[str, int]
         for finding in matched_findings:
             ingest_finding_and_chain(service_id, finding)
 
-    # Ensure complete pivot path and crown-jewel asset exist (Phase D chain)
+    # Ensure complete pivot path and crown-jewel asset exist
     ensure_attack_chain_completion()
 
     return {"hosts_processed": hosts_merged, "services_processed": services_merged}
@@ -115,29 +137,40 @@ def ingest_finding_and_chain(service_id: str, finding: Dict[str, Any]) -> None:
 def ensure_attack_chain_completion() -> None:
     """
     Idempotently constructs the full known multi-stage chain connecting:
-    PrivilegeState -> internal_host (10.10.10.20) -> db_asset (10.10.10.30) -> Asset (Customer DB)
+    PrivilegeState -> Pivot Hosts -> Target Host -> Crown-Jewel Asset.
     """
-    chain_query = """
-    // 1. Merge internal host and DB host if not already created
-    MERGE (h_web:Host {ip: '10.10.10.10'})
-      ON CREATE SET h_web.exposure = 'internet', h_web.status = 'up', h_web.name = 'web-gateway'
-    MERGE (h_internal:Host {ip: '10.10.10.20'})
-      ON CREATE SET h_internal.exposure = 'internal', h_internal.status = 'up', h_internal.name = 'internal-jump'
-    MERGE (h_db:Host {ip: '10.10.10.30'})
-      ON CREATE SET h_db.exposure = 'internal', h_db.status = 'up', h_db.name = 'db-server'
+    # 1. Attack chain for new lab machines:
+    # lab-web-04 (Apache RCE priv-daemon-web) -> lab-web-06 (internal pivot) -> lab-service-05 (pure-ftpd) -> Asset
+    lab_chain_query = """
+    MATCH (h_jump:Host) WHERE h_jump.hostname = 'lab-web-06' OR h_jump.name = 'lab-web-06'
+    MATCH (h_asset:Host) WHERE h_asset.hostname = 'lab-service-05' OR h_asset.name = 'lab-service-05'
+    MATCH (p:PrivilegeState {id: 'priv-daemon-web'})
+    MERGE (p)-[:PIVOTS_TO]->(h_jump)
+    MERGE (h_jump)-[:PIVOTS_TO]->(h_asset)
+    MERGE (a:Asset {id: 'asset-catalog-01'})
+      ON CREATE SET a.name = 'Synthetic Asset Records & Repository', a.criticality = 'crown-jewel'
+      ON MATCH SET a.name = 'Synthetic Asset Records & Repository', a.criticality = 'crown-jewel'
+    MERGE (h_asset)-[:PROTECTS]->(a)
+    """
+    try:
+        run_query(lab_chain_query)
+    except Exception as exc:
+        print(f"[graph_build.py] Lab attack chain completion note: {exc}")
 
-    // 2. Link PrivilegeState (from web exploit) PIVOTS_TO internal host
-    WITH h_web, h_internal, h_db
+    # 2. Attack chain for legacy cyber-range:
+    # 10.10.10.10 (Apache RCE priv-daemon-web) -> 10.10.10.20 (internal-jump) -> 10.10.10.30 (db-server) -> Asset
+    range_chain_query = """
+    MATCH (h_internal:Host {ip: '10.10.10.20'})
+    MATCH (h_db:Host {ip: '10.10.10.30'})
     MATCH (p:PrivilegeState {id: 'priv-daemon-web'})
     MERGE (p)-[:PIVOTS_TO]->(h_internal)
-
-    // 3. Link internal host PIVOTS_TO database host
     MERGE (h_internal)-[:PIVOTS_TO]->(h_db)
-
-    // 4. Merge Crown Jewel Asset and link PROTECTS
     MERGE (a:Asset {id: 'asset-db-01'})
       ON CREATE SET a.name = 'Customer Records Database', a.criticality = 'crown-jewel'
       ON MATCH SET a.name = 'Customer Records Database', a.criticality = 'crown-jewel'
     MERGE (h_db)-[:PROTECTS]->(a)
     """
-    run_query(chain_query)
+    try:
+        run_query(range_chain_query)
+    except Exception as exc:
+        print(f"[graph_build.py] Range attack chain completion note: {exc}")

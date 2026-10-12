@@ -1,7 +1,3 @@
-"""
-main.py - ThreatGraph FastAPI application entry point.
-"""
-
 from typing import Any, Dict, List
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -51,19 +47,17 @@ def health_check():
 
 
 class ScanRequest(BaseModel):
-    target_subnet: str = "10.10.10.0/24"
+    target_subnet: str = "threatgraph-lab"
 
 
 @app.post("/scan/start")
 def start_scan(req: ScanRequest = ScanRequest()):
     """
-    Trigger discovery scan on cyber-range network and ingest findings into Neo4j.
+    Trigger discovery scan on lab network (or specified subnet) and ingest findings into Neo4j.
     """
     try:
-        # 1. Run Nmap discovery on 10.10.10.0/24
         services = run_discovery_scan(req.target_subnet)
         
-        # 2. Ingest into Neo4j
         ingestion_stats = ingest_discovered_services(services)
 
         return {
